@@ -12,28 +12,33 @@ using namespace std;
 struct ProgramArgs {
 
     ProgramArgs(int argc, char **argv) {
-        for (auto &arg : Utils::make_span(argv + 1, argc - 1)) {
-            const string src_arg = "--sources=";
-            if (strstr(arg, src_arg.c_str()) == arg) {
-                for (char *s = strtok(arg + src_arg.length(), ","); s;
-                     s = strtok(nullptr, ","))
-                    sources.emplace_back(s);
+
+        auto argsToFileList = [](char *arg, const std::string &argname, std::vector<std::string> &files)
+        {
+            if (strstr(arg, argname.c_str()) != arg)
+                return;
+            for (char *s = strtok(arg + argname.length(), ","); s;) {
+                files.emplace_back(s);
+                s = strtok(nullptr, ",");
             }
+        };
+
+        for (auto &arg : Utils::make_span(argv + 1, argc - 1)) {
+            argsToFileList(arg, "--sources=", sources);
+            argsToFileList(arg, "--ignore=", ignore);
             getValue(arg, "--embeddingSize=", embeddingSize);
             getValue(arg, "--eta=", learningRate);
             getValue(arg, "--prevCt=", prevCt);
             getValue(arg, "--nextCt=", nextCt);
-            getValue(arg, "--negSampled=", negSamples);
         }
     }
 
-    vector<string> sources = {};
-    size_t embeddingSize = 70;
+    vector<string> sources = {}, ignore = {};
+    size_t embeddingSize = 64;
     float learningRate = 0.01;
     size_t prevCt = 3;
     size_t nextCt = 2;
-    size_t numEpochs = 100;
-    size_t negSamples = 20;
+    size_t numEpochs = 40;
 
 private:
     stringstream ss;
@@ -53,20 +58,26 @@ int main(int argc, char **argv) {
 #ifndef NDEBUG
     seed = 42;
 #endif
-    Corpus corpus(args.sources, seed);
-    CBoW model(corpus, args.embeddingSize, 5);
+    Corpus corpus(args.sources, args.ignore, seed);
+    std::ofstream corpusFile("corpus.txt");
+
+    CBoW model(corpus, args.embeddingSize, args.prevCt + args.nextCt);
 
     auto nation = model["nation"];
     auto state = model["state"];
     auto country = model["country"];
 
-    for(unsigned i = 0; i < args.numEpochs; ++i)
-    {
-        model.train(args.learningRate * powf(0.9, float(i)));
+    for (unsigned i = 0; i < args.numEpochs; ++i) {
         std::cout << i << ": \t(nation * state): " << nation * state
                   << "\t(nation * country): " << nation * country
                   << "\t(country * state): " << country * state << endl;
-    }
+        model.train(args.learningRate * powf(0.9, float(i)));
 
+        if( i % 10 == 0)
+        {
+            std::ofstream file(std::to_string(i) + "-iter.model");
+            model.serialize(file);
+        }
+    }
     return 0;
 }

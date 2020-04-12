@@ -13,7 +13,7 @@ Embedding::Embedding(Corpus &corpus, size_t embeddingSize, unsigned pCt,
       h(embeddingSize), dh(embeddingSize),
       v(embeddingSize), dv(embeddingSize)
 {
-  m_corpus.initIterators(pCt, nCt);
+    m_corpus.initIterators(pCt, nCt);
 }
 
 void Embedding::train(float eta)
@@ -29,21 +29,23 @@ void Embedding::train(float eta)
 
         nSample++;
         nCtx.clear();
-        for(unsigned n = 0; n < NUM_NEG_SAMPLES; ++n)
+        for (unsigned n = 0; n < NUM_NEG_SAMPLES; ++n)
             nCtx.push_back(m_corpus.sampleWord());
 
         h.fill(0.f);
-        for (auto& c : ctx)
+        for (auto &c : ctx)
             h += Wi[c];
         h /= ctx.size();
 
         updateOutputMatrix(word, ctx, nCtx, eta);
         updateInputMatrix(word, ctx, nCtx, eta);
-
-        auto nan = Wo.findNanColumn();
-        if(nan != size_t(-1))
-            std::cout <<  nan << m_corpus[nan] << std::endl;
     }
+}
+
+void Embedding::serialize(std::ofstream &file) {
+    file << Wi.majorSize << ' ' << Wi.minorSize << ' ';
+    file.write(reinterpret_cast<const char *>(Wi.getData()), Wi.minorSize * Wi.minorSize * sizeof(float));
+    file.write(reinterpret_cast<const char *>(Wo.getData()), Wi.minorSize * Wi.minorSize * sizeof(float));
 }
 
 void CBoW::updateOutputMatrix(size_t target, const Context &ctx,  Context& nCtx, float eta)

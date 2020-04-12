@@ -14,34 +14,25 @@ template<typename T, typename T2 = void>
 struct EmbeddingMatrix;
 
 template<typename T>
-struct EmbeddingMatrix<
-        T, typename std::enable_if<std::is_arithmetic<T>::value>::type> {
-    EmbeddingMatrix(size_t major, size_t minor)
-            : majorSize(major), minorSize(minor), data(new T[majorSize * minorSize])
-    {
+struct EmbeddingMatrix<T, typename std::enable_if<std::is_arithmetic<T>::value>::type> {
+    EmbeddingMatrix(size_t major, size_t minor) :
+            majorSize(major),
+            minorSize(minor),
+            data(new T[majorSize * minorSize])
+{
+        unsigned seed =
+#ifdef NDEBUG
+                time(nullptr);
+#else
+                42;
+#endif
+        static std::default_random_engine generator( seed );
+        static std::uniform_real_distribution<T> distribution(0, 1);
         for (size_t i = 0; i < majorSize * minorSize; ++i)
-            data[i] = getNormalRandom();
+            data[i] = distribution(generator);
     }
 
-    static T getNormalRandom(const size_t *seed = nullptr) {
-        static std::default_random_engine generator;
-
-        static std::normal_distribution<T> distribution(0, 1);
-
-        if (seed)
-            generator = std::default_random_engine(*seed);
-
-        return distribution(generator);
-    }
-
-    size_t findNanColumn()
-    {
-        auto last = data.get() + majorSize * minorSize;
-        auto found = std::find_if(data.get(), last, [](float f) { return std::isnan(f); });
-        if (found == last)
-            return size_t(-1);
-        return (last - data.get()) / majorSize;
-    }
+    const T *getData() { return data.get(); }
 
     inline Utils::Span<T> operator[](size_t offset) {
 #ifndef NDEBUG
@@ -65,14 +56,18 @@ class Embedding {
 public:
 
     using Context = std::vector<size_t>;
+
     Embedding(Corpus &corpus, size_t K, unsigned pCt, unsigned nCt);
 
     void train(float eta);
 
-    virtual void updateOutputMatrix(size_t target, const Context &ctx, Context &nctx,float eta) = 0;
+    virtual void updateOutputMatrix(size_t target, const Context &ctx, Context &nctx, float eta) = 0;
+
     virtual void updateInputMatrix(size_t target, const Context &ctx, Context &nctx, float eta) = 0;
 
-    Utils::FloatSpan operator[](const std::string& s) { return Wo[m_corpus[s]]; }
+    Utils::FloatSpan operator[](const std::string &s) { return Wo[m_corpus[s]]; }
+
+    void serialize(std::ofstream &file);
 
 protected:
     static constexpr unsigned NUM_NEG_SAMPLES = 15;
