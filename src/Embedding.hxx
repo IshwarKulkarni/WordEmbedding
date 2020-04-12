@@ -18,15 +18,12 @@ struct EmbeddingMatrix<T, typename std::enable_if<std::is_arithmetic<T>::value>:
     EmbeddingMatrix(size_t major, size_t minor) :
             majorSize(major),
             minorSize(minor),
-            data(new T[majorSize * minorSize])
-{
-        unsigned seed =
+            data(new T[majorSize * minorSize]) {
+        unsigned seed = 42;
 #ifdef NDEBUG
-                time(nullptr);
-#else
-                42;
+        seed = time(nullptr);
 #endif
-        static std::default_random_engine generator( seed );
+        static std::default_random_engine generator(seed);
         static std::uniform_real_distribution<T> distribution(0, 1);
         for (size_t i = 0; i < majorSize * minorSize; ++i)
             data[i] = distribution(generator);
@@ -42,7 +39,7 @@ struct EmbeddingMatrix<T, typename std::enable_if<std::is_arithmetic<T>::value>:
         return Utils::make_span(data.get() + offset * majorSize, majorSize);
     }
 
-    inline const Utils::Span<T>& operator[](size_t offset) const {
+    inline const Utils::Span<T> &operator[](size_t offset) const {
         return Utils::make_span(data.get() + offset * majorSize, majorSize);
     }
 
@@ -59,7 +56,7 @@ public:
 
     Embedding(Corpus &corpus, size_t K, unsigned pCt, unsigned nCt);
 
-    void train(float eta);
+    void train(float eta, size_t maxSample = size_t(-1));
 
     virtual void updateOutputMatrix(size_t target, const Context &ctx, Context &nctx, float eta) = 0;
 
@@ -70,7 +67,7 @@ public:
     void serialize(std::ofstream &file);
 
 protected:
-    static constexpr unsigned NUM_NEG_SAMPLES = 15;
+    static constexpr unsigned NUM_NEG_SAMPLES = 20;
 
     Corpus &m_corpus;
     EmbeddingMatrix<float> Wi; // Word matrix

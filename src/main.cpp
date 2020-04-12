@@ -38,7 +38,7 @@ struct ProgramArgs {
     float learningRate = 0.01;
     size_t prevCt = 3;
     size_t nextCt = 2;
-    size_t numEpochs = 40;
+    size_t numEpochs = 5;
 
 private:
     stringstream ss;
@@ -60,21 +60,32 @@ int main(int argc, char **argv) {
 #endif
     Corpus corpus(args.sources, args.ignore, seed);
     std::ofstream corpusFile("corpus.txt");
+    corpus.serialize(corpusFile);
 
     CBoW model(corpus, args.embeddingSize, args.prevCt + args.nextCt);
 
-    auto nation = model["nation"];
-    auto state = model["state"];
-    auto country = model["country"];
+    auto test = [&model](size_t i, float eta, float time) {
+        static auto nation = model["nation"];
+        static auto state = model["state"];
+        static auto country = model["country"];
+
+        std::cout << i << ":\t\t(nation * state): " << nation * state
+                  << "\t(nation * country): " << nation * country
+                  << "\t(country * state): " << country * state
+                  << "\t\titeration in " << time << "s."
+                  << "\t\t eta: " << eta << '.' << endl;
+    };
+
+    test(0, args.learningRate, 0.0f);
 
     for (unsigned i = 0; i < args.numEpochs; ++i) {
-        std::cout << i << ": \t(nation * state): " << nation * state
-                  << "\t(nation * country): " << nation * country
-                  << "\t(country * state): " << country * state << endl;
-        model.train(args.learningRate * powf(0.9, float(i)));
+        auto start = clock();
+        float eta = args.learningRate * powf(0.95, float(i));
+        model.train(eta);
+        float time = float(clock() - start) / CLOCKS_PER_SEC;
 
-        if( i % 10 == 0)
-        {
+        test(i + 1, eta, time);
+        if (i % 10 == 0) {
             std::ofstream file(std::to_string(i) + "-iter.model");
             model.serialize(file);
         }

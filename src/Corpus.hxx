@@ -27,11 +27,11 @@ public:
 
     [[nodiscard]] size_t operator[](const std::string &word) const;
 
-    [[nodiscard]] const std::string &operator[](size_t code) const;
+    [[nodiscard]] const std::string &operator[](size_t wc) const;
 
-    [[nodiscard]] bool useWord(size_t w) const;
+    [[nodiscard]] bool useWord(size_t w);
 
-    [[nodiscard]] size_t sampleWord(size_t maxAttempts = 100) const;
+    inline size_t sampleVocab() { return m_vocabDistribution(m_generator); }
 
     void serialize(std::ofstream &file);
 
@@ -43,7 +43,9 @@ private:
 
     size_t m_prevCt = 0, m_nextCt = 0;
 
-    static constexpr float SAMPLE_THRESH = (1e-3f);
+    static constexpr float SAMPLE_THRESH = 5e-4f;
+
+    static constexpr float SAMPLING_POW = 0.4f;
 
     std::map<std::string, size_t> m_uniqueWordCount;
 
@@ -53,7 +55,7 @@ private:
     std::vector<size_t>::iterator m_wordIter;
 
     std::vector<std::string> m_orderedWords;
-    std::vector<float> m_occurenceCounts; // z(wi)/0.001
+    std::vector<float> m_occurenceFrequency;
 
     void buildWordCount(const char *filename);
 
@@ -64,6 +66,10 @@ private:
     bool clean(std::string &word) const;
 
     std::unordered_set<std::string> m_ignoreWords;
+
+    std::default_random_engine m_generator;
+
+    std::discrete_distribution<size_t> m_vocabDistribution;
 };
 
 #endif // WORD_EMBEDDING_CORPUS_H

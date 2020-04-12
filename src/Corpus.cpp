@@ -8,19 +8,21 @@
 #include <iostream>
 #include <random>
 
-bool Corpus::clean(std::string &word) const {
+using namespace std;
+
+bool Corpus::clean(string &word) const {
     auto first = word.begin();
-    auto last = std::prev(word.end());
+    auto last = prev(word.end());
 
     bool endOfSentence = false;
 
     while (*last == ',' or *last == '\'' or *last == '\"' or
            *last == ':' or *last == '-' or *last == ')')
-        last = std::prev(last);
+        last = prev(last);
 
 
     while (*last == '.' or *last == '?' or *last == ';' or *last == '!') {
-        last = std::prev(last);
+        last = prev(last);
         endOfSentence = true;
     }
 
@@ -29,7 +31,7 @@ bool Corpus::clean(std::string &word) const {
         first = std::next(first);
 
     if (last - first > 1) {
-        std::string s;
+        string s;
         for (auto c = first; c <= last; ++c)
             if (isalpha(*c) or *c == '\'')
                 s.push_back(tolower(*c));
@@ -48,18 +50,15 @@ bool Corpus::clean(std::string &word) const {
     return endOfSentence;
 }
 
-static std::default_random_engine g_generator;
-
-static std::uniform_real_distribution<float> g_realDistribution; // [0,1)
-
-Corpus::Corpus(const std::vector<std::string> &filenames,
-               const std::vector<std::string> &ignoredWordFiles, size_t seed) {
+Corpus::Corpus(const vector<string> &filenames,
+               const vector<string> &ignoredWordFiles, size_t seed)
+        : m_generator(seed) {
     if (filenames.empty())
-        throw std::runtime_error("Sources Empty");
+        throw runtime_error("Sources Empty");
 
     for (auto &fn : ignoredWordFiles) {
-        std::ifstream file(fn);
-        std::string s;
+        ifstream file(fn);
+        string s;
         while (file >> s)
             m_ignoreWords.insert(s);
     }
@@ -72,39 +71,37 @@ Corpus::Corpus(const std::vector<std::string> &filenames,
     for (const auto &s : filenames)
         encodeSource(s.c_str());
 
-    std::cout << "Corpus built with " << m_numWords << " original words, "
+    cout << "Corpus built with " << m_numWords << " original words, "
               << m_uniqueWordCount.size() << " unique words in "
               << m_sentences.size() << " sentences.\n";
-
-    g_generator.seed(seed);
 }
 
 
 template<typename F>
 void goThroughFile(const char *filename, F function) {
-    auto isBodyOpenTag = [](const std::string &word) {
-        return word.find("<BODY>") != std::string::npos ||
-               word.find("<body>") != std::string::npos;
+    auto isBodyOpenTag = [](const string &word) {
+        return word.find("<BODY>") != string::npos ||
+               word.find("<body>") != string::npos;
     };
 
-    auto isBodyCloseTag = [](const std::string &word) {
-        return word.find("</BODY>") != std::string::npos ||
-               word.find("</body>") != std::string::npos;
+    auto isBodyCloseTag = [](const string &word) {
+        return word.find("</BODY>") != string::npos ||
+               word.find("</body>") != string::npos;
     };
 
     auto isFileLookingLikeMarkUp = [](const char *filename) {
-        std::ifstream file(filename);
+        ifstream file(filename);
         if (!file)
-            throw std::runtime_error("Couldn't open file at " + std::string(filename));
-        std::string s;
+            throw runtime_error("Couldn't open file at " + string(filename));
+        string s;
         file >> s;
         return s == "<!DOCTYPE";
     };
 
     bool ismarkup = isFileLookingLikeMarkUp(filename);
 
-    std::ifstream source(std::ifstream(filename, std::ios::binary));
-    std::string word;
+    ifstream source(ifstream(filename, ios::binary));
+    string word;
     bool accumulateOn = !ismarkup;
     while (source >> word) {
         if (ismarkup) {
@@ -123,7 +120,7 @@ void goThroughFile(const char *filename, F function) {
 void Corpus::buildWordCount(const char *filename) {
     size_t existingCt = m_uniqueWordCount.size();
 
-    goThroughFile(filename, [this](std::string &s) {
+    goThroughFile(filename, [this](string &s) {
         clean(s);
         if (s.empty())
             return;
@@ -132,30 +129,36 @@ void Corpus::buildWordCount(const char *filename) {
     });
 
     if (m_uniqueWordCount.size() - existingCt == 0)
-        throw std::runtime_error("Word count is zero, file at \"" +
-                                 std::string(filename) + "\" could not be read");
+        throw runtime_error("Word count is zero, file at \"" +
+                            string(filename) + "\" could not be read");
 }
 
 void Corpus::flattenWordCounts() {
-
     m_orderedWords.reserve(m_uniqueWordCount.size());
-    m_occurenceCounts.reserve(m_uniqueWordCount.size());
-    auto wordCt = float(m_numWords) * SAMPLE_THRESH;
+    m_occurenceFrequency.reserve(m_uniqueWordCount.size());
+
+    vector<float> vocabDistVec;
+    vocabDistVec.reserve(m_uniqueWordCount.size());
+
+    auto wordCt = float(m_numWords);
     for (auto &p : m_uniqueWordCount) {
         m_orderedWords.push_back(p.first);
-        m_occurenceCounts.push_back(p.second / wordCt);
+        float f = p.second / wordCt;
+        m_occurenceFrequency.push_back(f / SAMPLE_THRESH);
+        vocabDistVec.push_back(powf(f, SAMPLING_POW));
     }
+    m_vocabDistribution = discrete_distribution<size_t>(vocabDistVec.begin(), vocabDistVec.end());
 }
 
 void Corpus::encodeSource(const char *filename) {
-    std::ifstream source(filename, std::ios::binary);
+    ifstream source(filename, ios::binary);
 
-    std::string word;
-    std::vector<size_t> sentence;
+    string word;
+    vector<size_t> sentence;
 
     size_t existingCt = m_sentences.size();
 
-    goThroughFile(filename, [this, &sentence](std::string &s) {
+    goThroughFile(filename, [this, &sentence](string &s) {
         auto eos = clean(s);
         if (s.empty())
             return;
@@ -170,42 +173,31 @@ void Corpus::encodeSource(const char *filename) {
     });
 
     if (m_sentences.size() - existingCt == 0)
-        throw std::runtime_error("Encoding the file failed");
+        throw runtime_error("Encoding the file failed");
 }
 
-size_t Corpus::operator[](const std::string &word) const {
+size_t Corpus::operator[](const string &word) const {
     auto found =
-            std::equal_range(m_orderedWords.begin(), m_orderedWords.end(), word);
+            equal_range(m_orderedWords.begin(), m_orderedWords.end(), word);
     if (found.first == m_orderedWords.end()) {
-        throw std::runtime_error("Unknown word \"" + word + "\" queried");
+        throw runtime_error("Unknown word \"" + word + "\" queried");
     }
 
-    return std::distance(m_orderedWords.begin(), found.first);
+    return distance(m_orderedWords.begin(), found.first);
 }
 
-const std::string &Corpus::operator[](size_t o) const {
-    if (o >= m_orderedWords.size()) {
-        throw std::runtime_error("Word not found ");
+const string &Corpus::operator[](size_t wc) const {
+    if (wc >= m_orderedWords.size()) {
+        throw runtime_error("Word not found ");
     }
-    return m_orderedWords[o];
+    return m_orderedWords[wc];
 }
 
-bool Corpus::useWord(size_t w) const {
-    float z = m_occurenceCounts[w];
+bool Corpus::useWord(size_t w) {
+    static uniform_real_distribution<float> s_realDistribution; // [0,1)
+    float z = m_occurenceFrequency[w];
     float K = (1.f + sqrtf(z)) / z;
-    return g_realDistribution(g_generator) < K;
-}
-
-size_t Corpus::sampleWord(size_t maxAttempts) const
-{
-    static std::uniform_int_distribution<size_t> randomSentenceDist(m_sentences.size());
-
-    for (size_t i = 0; i < maxAttempts; ++i) {
-        size_t r = randomSentenceDist(g_generator) % m_uniqueWordCount.size();
-        if (useWord(r))
-            return r;
-    }
-    return randomSentenceDist(g_generator);
+    return s_realDistribution(m_generator) < K;
 }
 
 void Corpus::initIterators(size_t prevCt, size_t nextCt) {
@@ -221,7 +213,7 @@ void Corpus::resetIterators()
     m_wordIter = m_sentenceIter->begin()++;
 }
 
-bool Corpus::next(size_t &word, std::vector<size_t> &mRetWords, size_t &wrdIdx) {
+bool Corpus::next(size_t &word, vector<size_t> &mRetWords, size_t &wrdIdx) {
 
     mRetWords.clear();
     wrdIdx = size_t(-1);
@@ -253,7 +245,7 @@ bool Corpus::next(size_t &word, std::vector<size_t> &mRetWords, size_t &wrdIdx) 
 }
 
 // Very flaky implem of serializing and deserializing
-void Corpus::serialize(std::ofstream &file) {
+void Corpus::serialize(ofstream &file) {
     file << m_numWords << " "
          << m_prevCt << " "
          << m_nextCt << " "
@@ -271,14 +263,15 @@ void Corpus::serialize(std::ofstream &file) {
     }
 }
 
-Corpus::Corpus(std::ifstream &file, size_t seed) {
+Corpus::Corpus(ifstream &file, size_t seed) :
+        m_generator(seed) {
     size_t numUniqueWords = 0;
     file >> m_numWords
          >> m_prevCt
          >> m_nextCt
          >> numUniqueWords;
 
-    std::string s;
+    string s;
     size_t count;
     for (size_t i = 0; i < numUniqueWords; ++i) {
         file >> s >> count;
@@ -287,11 +280,9 @@ Corpus::Corpus(std::ifstream &file, size_t seed) {
 
     flattenWordCounts();
 
-    std::cout << "Corpus built with " << m_numWords << " original words, "
-              << m_uniqueWordCount.size() << " unique words in "
-              << m_sentences.size() << " sentences.\n";
-
-    g_generator.seed(seed);
+    cout << "Corpus built with " << m_numWords << " original words, "
+         << m_uniqueWordCount.size() << " unique words in "
+         << m_sentences.size() << " sentences.\n";
 
     size_t numSentences = 0;
     file >> numSentences;
@@ -299,7 +290,7 @@ Corpus::Corpus(std::ifstream &file, size_t seed) {
     for (size_t i = 0; i < numSentences; ++i) {
         size_t numWords;
         file >> numWords;
-        std::vector<size_t> sentence(numWords, 0);
+        vector<size_t> sentence(numWords, 0);
         for (auto &w : sentence)
             file >> s;
     }

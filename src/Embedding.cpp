@@ -16,21 +16,18 @@ Embedding::Embedding(Corpus &corpus, size_t embeddingSize, unsigned pCt,
     m_corpus.initIterators(pCt, nCt);
 }
 
-void Embedding::train(float eta)
-{
+void Embedding::train(float eta, size_t maxSample) {
     size_t word, wi;
     Context ctx, nCtx;
     m_corpus.resetIterators();
-    unsigned nSample = 0;
-    while(m_corpus.next(word, ctx, wi))
-    {
-        if(ctx.empty())
+
+    for (size_t nSample = 0; m_corpus.next(word, ctx, wi) and nSample < maxSample; ++nSample) {
+        if (ctx.empty())
             continue;
 
-        nSample++;
         nCtx.clear();
         for (unsigned n = 0; n < NUM_NEG_SAMPLES; ++n)
-            nCtx.push_back(m_corpus.sampleWord());
+            nCtx.push_back(m_corpus.sampleVocab());
 
         h.fill(0.f);
         for (auto &c : ctx)
