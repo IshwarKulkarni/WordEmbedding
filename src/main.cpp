@@ -35,10 +35,10 @@ struct ProgramArgs {
 
     vector<string> sources = {}, ignore = {};
     size_t embeddingSize = 64;
-    float learningRate = 0.01;
+    float learningRate = 0.002;
     size_t prevCt = 3;
     size_t nextCt = 2;
-    size_t numEpochs = 5;
+    size_t numEpochs = 25;
 
 private:
     stringstream ss;
@@ -62,9 +62,10 @@ int main(int argc, char **argv) {
     std::ofstream corpusFile("corpus.txt");
     corpus.serialize(corpusFile);
 
-    CBoW model(corpus, args.embeddingSize, args.prevCt + args.nextCt);
+    SkipGram model(corpus, args.embeddingSize, args.prevCt + args.nextCt);
 
-    auto test = [&model](size_t i, float eta, float time) {
+    auto test = [&model](size_t i, float eta, float time)
+    {
         static auto nation = model["nation"];
         static auto state = model["state"];
         static auto country = model["country"];
@@ -80,12 +81,12 @@ int main(int argc, char **argv) {
 
     for (unsigned i = 0; i < args.numEpochs; ++i) {
         auto start = clock();
-        float eta = args.learningRate * powf(0.95, float(i));
+        float eta = args.learningRate * powf(0.9, float(i));
         model.train(eta);
         float time = float(clock() - start) / CLOCKS_PER_SEC;
 
         test(i + 1, eta, time);
-        if (i % 10 == 0) {
+        if (i % 5 == 0) {
             std::ofstream file(std::to_string(i) + "-iter.model");
             model.serialize(file);
         }

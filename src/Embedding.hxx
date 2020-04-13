@@ -62,9 +62,15 @@ public:
 
     virtual void updateInputMatrix(size_t target, const Context &ctx, Context &nctx, float eta) = 0;
 
+    virtual void updateH(Context& ctx, size_t word) = 0;
+
     Utils::FloatSpan operator[](const std::string &s) { return Wo[m_corpus[s]]; }
 
     void serialize(std::ofstream &file);
+
+    void updateV(size_t w, float tj, float eta);
+
+    const Utils::FloatSpan& getdH(size_t w, float tj, float eta);
 
 protected:
     static constexpr unsigned NUM_NEG_SAMPLES = 20;
@@ -80,6 +86,11 @@ class SkipGram : public Embedding {
 public:
     SkipGram(Corpus &corpus, size_t K, unsigned contextSize)
             : Embedding(corpus, K, K % 2 == 0 ? K / 2 : K / 2 + 1, K / 2) {}
+
+    void updateOutputMatrix(size_t target, const Context &ctx, Context &nctx, float eta) override;
+    void updateInputMatrix(size_t target, const Context &ctx, Context &nctx, float eta)  override;
+
+    void updateH(Context&, size_t word) override  { h.copyFrom(Wi[word]); }
 };
 
 // The CBOW model predicts the target word, given a context
@@ -92,6 +103,8 @@ public:
 
     void updateOutputMatrix(size_t target, const Context &ctx, Context &nctx, float eta) override;
     void updateInputMatrix(size_t target, const Context &ctx, Context &nctx, float eta)  override;
+
+    void updateH(Context& ctx, size_t) override;
 };
 
 #endif // WORDEMBEDDING_EMBEDDING_HXX
