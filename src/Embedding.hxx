@@ -1,5 +1,7 @@
 //
 // Created by ishwark on 11/04/20.
+// Copyright 2020 Ishwar Kulkarni.
+// Subject to GPL License(www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 //
 
 #ifndef WORDEMBEDDING_EMBEDDING_HXX
@@ -8,7 +10,6 @@
 #include "Corpus.hxx"
 #include "Utils.hxx"
 #include <algorithm>
-#include <cmath>
 
 template<typename T, typename T2 = void>
 struct EmbeddingMatrix;
@@ -19,10 +20,7 @@ struct EmbeddingMatrix<T, typename std::enable_if<std::is_arithmetic<T>::value>:
             majorSize(major),
             minorSize(minor),
             data(new T[majorSize * minorSize]) {
-        unsigned seed = 42;
-#ifdef NDEBUG
-        seed = time(nullptr);
-#endif
+        size_t seed = Utils::rseed();
         static std::default_random_engine generator(seed);
         static std::uniform_real_distribution<T> distribution(0, 1);
         for (size_t i = 0; i < majorSize * minorSize; ++i)
@@ -49,31 +47,37 @@ private:
     std::unique_ptr<T[]> data;
 };
 
+// These predictive embedding models minimize the loss of predicting a target word,
+// given a context in case of CBoW subclass and that of predicting context words, given
+// a word in case of SkipGram subClass. In both cases the loss function is Cross Entropy
+// between predicted and 'corrected' distribution.
+// Bother sub classes use  Negative sampling optimization to reduce compute.
 class Embedding {
 public:
 
     using Context = std::vector<size_t>;
 
-    Embedding(Corpus &corpus, size_t K, unsigned pCt, unsigned nCt);
+    Embedding(Corpus &corpus, size_t K, size_t pCt, size_t nCt);
 
-    void train(float eta, size_t maxSample = size_t(-1));
-
-    virtual void updateOutputMatrix(size_t target, const Context &ctx, Context &nctx, float eta) = 0;
-
-    virtual void updateInputMatrix(size_t target, const Context &ctx, Context &nctx, float eta) = 0;
-
-    virtual void updateH(Context& ctx, size_t word) = 0;
+    void train(float eta, size_t maxSamples = size_t(-1));
 
     Utils::FloatSpan operator[](const std::string &s) { return Wo[m_corpus[s]]; }
 
     void serialize(std::ofstream &file);
 
+protected:
+
+    virtual void updateOutputMatrix(size_t target, const Context &ctx, Context &nctx, float eta) = 0;
+
+    virtual void updateInputMatrix(size_t target, const Context &ctx, Context &nctx, float eta) = 0;
+
+    virtual void updateH(Context &ctx, size_t word) = 0;
+
     void updateV(size_t w, float tj, float eta);
 
-    const Utils::FloatSpan& getdH(size_t w, float tj, float eta);
+    const Utils::FloatSpan &getdH(size_t w, float tj, float eta);
 
-protected:
-    static constexpr unsigned NUM_NEG_SAMPLES = 20;
+    static constexpr size_t NUM_NEG_SAMPLES = 20;
 
     Corpus &m_corpus;
     EmbeddingMatrix<float> Wi; // Word matrix
@@ -84,7 +88,7 @@ protected:
 
 class SkipGram : public Embedding {
 public:
-    SkipGram(Corpus &corpus, size_t K, unsigned contextSize)
+    SkipGram(Corpus &corpus, size_t K, size_t contextSize)
             : Embedding(corpus, K, K % 2 == 0 ? K / 2 : K / 2 + 1, K / 2) {}
 
     void updateOutputMatrix(size_t target, const Context &ctx, Context &nctx, float eta) override;
@@ -93,12 +97,9 @@ public:
     void updateH(Context&, size_t word) override  { h.copyFrom(Wi[word]); }
 };
 
-// The CBOW model predicts the target word, given a context
-// This minimizes cross-entropy loss between the probability vector and the
-// embedded vector of the output word
 class CBoW : public Embedding {
 public:
-    CBoW(Corpus &corpus, size_t K, unsigned contextSize)
+    CBoW(Corpus &corpus, size_t K, size_t contextSize)
             : Embedding(corpus, K, K % 2 == 0 ? K / 2 : K / 2 + 1, K / 2) {}
 
     void updateOutputMatrix(size_t target, const Context &ctx, Context &nctx, float eta) override;

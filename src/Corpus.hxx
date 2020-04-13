@@ -1,5 +1,7 @@
 //
-// Created by ishwark on 08/04/20.
+// Created by ishwark on 11/04/20.
+// Copyright 2020 Ishwar Kulkarni.
+// Subject to GPL V2 License(www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 //
 
 #ifndef WORD_EMBEDDING_CORPUS_H

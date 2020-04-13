@@ -1,6 +1,9 @@
 //
-// Created by ishwark on 08/04/20.
+// Created by ishwark on 11/04/20.
+// Copyright 2020 Ishwar Kulkarni.
+// Subject to GPL License(www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 //
+
 
 #ifndef WORD_EMBEDDING_UTILS_HXX
 #define WORD_EMBEDDING_UTILS_HXX
@@ -19,7 +22,6 @@ namespace Utils {
         explicit Span(size_t len)
                 : storage(new T[len]), ptr(storage.get()), len(len) {}
 
-        Span() = default;
 
         void copyFrom(const Span<T> &other)
         {
@@ -38,6 +40,19 @@ namespace Utils {
 #endif
             return ptr[i];
         }
+
+        inline void operator=(const Span<T> &other) {
+            if (storage.get())
+                this->copyFrom(other);
+            else {
+                ptr = other.ptr;
+                len = other.len;
+            }
+        }
+
+        Span<T>(const Span<T> &other) :
+                ptr(other.ptr),
+                len(other.len) {}
 
         [[nodiscard]] inline size_t size() const { return len; }
 
@@ -109,6 +124,14 @@ namespace Utils {
     using FloatSpan = Utils::Span<float>;
 
     inline float Sigmoid(float v) { return 1.f / (1.f + expf(-v)); }
+
+    inline size_t rseed() {
+        size_t seed = 42;
+#ifdef NDEBUG
+        seed = time(nullptr);
+#endif
+        return seed;
+    }
 }
 
 #endif // WORD_EMBEDDING_UTILS_HXX

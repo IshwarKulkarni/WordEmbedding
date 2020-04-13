@@ -1,5 +1,7 @@
 //
-// Created by ishwark on 08/04/20.
+// Created by ishwark on 11/04/20.
+// Copyright 2020 Ishwar Kulkarni.
+// Subject to GPL V2 License(www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 //
 
 #include "Corpus.hxx"
@@ -41,7 +43,6 @@ bool Corpus::clean(string &word) const {
             }
 
         word = s;
-
         if (m_ignoreWords.find(s) == m_ignoreWords.end())
             return endOfSentence;
     }
@@ -295,4 +296,3 @@ Corpus::Corpus(ifstream &file, size_t seed) :
             file >> s;
     }
 }
-

@@ -1,0 +1,183 @@
+    afghanistan
+    albania
+    algeria
+    andorra
+    angola
+    antigua
+    argentina
+    armenia
+    australia
+    austria
+    austrian empire
+    azerbaijan
+    baden*
+    bahamas
+    bahrain
+    bangladesh
+    barbados
+    bavaria
+    belarus
+    belgium
+    belize
+    benin
+    bolivia
+    bosnia
+    botswana
+    brazil
+    brunei
+    brunswick
+    bulgaria
+    burkina faso
+    burma
+    burundi
+    cabo verde
+    cambodia
+    cameroon
+    canada
+    chad
+    chile
+    china
+    colombia
+    comoros
+    costa rica
+    croatia
+    cuba
+    cyprus
+    czechia
+    czechoslovakia
+    congo
+    denmark
+    djibouti
+    dominica
+    dominican republic
+    ecuador
+    egypt
+    el salvador
+    equatorial guinea
+    eritrea
+    estonia
+    eswatini
+    ethiopia
+    fiji
+    finland
+    france
+    gabon
+    gambia
+    georgia
+    germany
+    ghana
+    greece
+    grenada
+    guatemala
+    guinea
+    guinea-bissau
+    guyana
+    haiti
+    hanover
+    hesse*
+    holy see
+    honduras
+    hungary
+    iceland
+    india
+    indonesia
+    iran
+    iraq
+    ireland
+    israel
+    italy
+    jamaica
+    japan
+    jordan
+    kenya
+    kiribati
+    korea
+    kosovo
+    kuwait
+    latvia
+    lebanon
+    lesotho
+    liberia
+    libya
+    liechtenstein
+    lithuania
+    malawi
+    malaysia
+    maldives
+    mali
+    malta
+    marshall islands
+    mauritania
+    mauritius
+    mexico
+    micronesia
+    moldova
+    monaco
+    mongolia
+    montenegro
+    morocco
+    mozambique   
+    namibia
+    nauru
+    nepal
+    netherlands, the
+    new zealand
+    nicaragua
+    niger
+    nigeria
+    oman
+    pakistan
+    palau
+    panama
+    papal states*
+    papua new guinea
+    paraguay
+    peru
+    philippines
+    poland
+    romania
+    russia
+    saint lucia
+    samoa
+    san marino
+    sao tome and principe
+    saudi arabia
+    schaumburg-lippe*
+    senegal
+    serbia
+    seychelles
+    sierra leone
+    singapore
+    slovakia
+    slovenia
+    solomon islands, the
+    somalia
+    south africa
+    south sudan
+    spain
+    sri lanka
+    sudan
+    suriname
+    sweden
+    switzerland
+    syria    tajikistan
+    tanzania
+    texas*
+    thailand
+    timor-leste
+    togo
+    tonga
+    trinidad and tobago
+    tunisia
+    turkey
+    turkmenistan
+    tuvalu
+    two sicilies
+    ukraine
+    united kingdom
+    uruguay
+    uzbekistan
+    venezuela
+    vietnam
+    zimbabwe
+

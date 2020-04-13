@@ -1,15 +1,17 @@
 //
 // Created by ishwark on 11/04/20.
+// Copyright 2020 Ishwar Kulkarni.
+// Subject to GPL V2 License(www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 //
 
 #include "Embedding.hxx"
 
-Embedding::Embedding(Corpus &corpus, size_t K, unsigned pCt, unsigned nCt)
-    : m_corpus(corpus),
-      Wi(K, corpus.getVocabularySize()),
-      Wo(K, corpus.getVocabularySize()),
-      h(K), dh(K),
-      v(K), dv(K)
+Embedding::Embedding(Corpus &corpus, size_t K, size_t pCt, size_t nCt)
+        : m_corpus(corpus),
+          Wi(K, corpus.getVocabularySize()),
+          Wo(K, corpus.getVocabularySize()),
+          h(K), dh(K),
+          v(K), dv(K)
 {
     m_corpus.initIterators(pCt, nCt);
 }
@@ -25,7 +27,7 @@ void Embedding::train(float eta, size_t maxSample)
             continue;
 
         nCtx.clear();
-        for (unsigned n = 0; n < NUM_NEG_SAMPLES; ++n)
+        for (size_t n = 0; n < NUM_NEG_SAMPLES; ++n)
             nCtx.push_back(m_corpus.sampleVocab());
 
         updateH(ctx, word);
