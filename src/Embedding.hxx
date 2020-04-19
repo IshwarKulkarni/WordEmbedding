@@ -25,6 +25,11 @@ struct EmbeddingMatrix<T, typename std::enable_if<std::is_arithmetic<T>::value>:
         static std::uniform_real_distribution<T> distribution(0, 1);
         for (size_t i = 0; i < majorSize * minorSize; ++i)
             data[i] = distribution(generator);
+
+        for (size_t i = 0; i < minorSize; ++i) {
+            auto mj = ((*this)[i]);
+            mj /= mj.mag();
+        }
     }
 
     const T *getData() { return data.get(); }
@@ -34,11 +39,15 @@ struct EmbeddingMatrix<T, typename std::enable_if<std::is_arithmetic<T>::value>:
         if (offset >= minorSize)
           throw std::runtime_error("Offset too large: " + std::to_string(offset));
 #endif
-        return Utils::make_span(data.get() + offset * majorSize, majorSize);
+        return Utils::Span(data.get() + offset * majorSize, majorSize);
     }
 
     inline const Utils::Span<T> &operator[](size_t offset) const {
-        return Utils::make_span(data.get() + offset * majorSize, majorSize);
+#ifndef NDEBUG
+        if (offset >= minorSize)
+          throw std::runtime_error("Offset too large: " + std::to_string(offset));
+#endif
+        return Utils::Span(data.get() + offset * majorSize, majorSize);
     }
 
     const size_t majorSize, minorSize;
@@ -57,7 +66,7 @@ public:
 
     using Context = std::vector<size_t>;
 
-    Embedding(Corpus &corpus, size_t K, size_t pCt, size_t nCt);
+    Embedding(Corpus &corpus, size_t K, size_t pCt, size_t nCt, size_t seed);
 
     void train(float eta, size_t maxSamples = size_t(-1));
 
@@ -88,24 +97,26 @@ protected:
 
 class SkipGram : public Embedding {
 public:
-    SkipGram(Corpus &corpus, size_t K, size_t contextSize)
-            : Embedding(corpus, K, K % 2 == 0 ? K / 2 : K / 2 + 1, K / 2) {}
+    SkipGram(Corpus &corpus, size_t K, size_t contextSize, size_t seed)
+            : Embedding(corpus, K, K % 2 == 0 ? K / 2 : K / 2 + 1, K / 2, seed) {}
 
     void updateOutputMatrix(size_t target, const Context &ctx, Context &nctx, float eta) override;
-    void updateInputMatrix(size_t target, const Context &ctx, Context &nctx, float eta)  override;
 
-    void updateH(Context&, size_t word) override  { h.copyFrom(Wi[word]); }
+    void updateInputMatrix(size_t target, const Context &ctx, Context &nctx, float eta) override;
+
+    void updateH(Context &, size_t word) override { h.deepCopy(Wi[word]); }
 };
 
 class CBoW : public Embedding {
 public:
-    CBoW(Corpus &corpus, size_t K, size_t contextSize)
-            : Embedding(corpus, K, K % 2 == 0 ? K / 2 : K / 2 + 1, K / 2) {}
+    CBoW(Corpus &corpus, size_t K, size_t contextSize, size_t seed)
+            : Embedding(corpus, K, K % 2 == 0 ? K / 2 : K / 2 + 1, K / 2, seed) {}
 
     void updateOutputMatrix(size_t target, const Context &ctx, Context &nctx, float eta) override;
-    void updateInputMatrix(size_t target, const Context &ctx, Context &nctx, float eta)  override;
 
-    void updateH(Context& ctx, size_t) override;
+    void updateInputMatrix(size_t target, const Context &ctx, Context &nctx, float eta) override;
+
+    void updateH(Context &ctx, size_t) override;
 };
 
 #endif // WORDEMBEDDING_EMBEDDING_HXX

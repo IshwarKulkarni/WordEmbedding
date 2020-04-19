@@ -9,10 +9,12 @@
 #define WORD_EMBEDDING_UTILS_HXX
 
 #include <memory>
-#include <random>
+#include <numeric>
+#include <cmath>
+#include <chrono>
 
 namespace Utils {
-// Span: [ptr, ptr + len).
+    // Span: [ptr, ptr + len).
     template<typename T>
     struct Span {
         Span(T *data, size_t len) : ptr(data), len(len) {}
@@ -22,12 +24,11 @@ namespace Utils {
         explicit Span(size_t len)
                 : storage(new T[len]), ptr(storage.get()), len(len) {}
 
-
-        void copyFrom(const Span<T> &other)
-        {
+        template<typename U>
+        void deepCopy(const Span<U> &other) {
 #ifndef NDEBUG
             if (other.size() != this->size())
-              throw std::runtime_error("Span lengths different, cannot be assigned.");
+              throw std::runtime_error("Span lengths different, cannot be copied.");
 #endif
             for (size_t i = 0; i < Span<T>::len; ++i)
                 Span<T>::ptr[i] = other[i];
@@ -41,13 +42,19 @@ namespace Utils {
             return ptr[i];
         }
 
-        inline void operator=(const Span<T> &other) {
+        inline Span<T> &operator=(const Span<T> &other) {
+#ifndef NDEBUG
+            if (other.size() != this->size())
+              throw std::runtime_error("Span lengths different, cannot be copied.");
+#endif
+            if (other.ptr == this->ptr)
+                return *this;
             if (storage.get())
-                this->copyFrom(other);
+                this->deepCopy(other);
             else {
                 ptr = other.ptr;
-                len = other.len;
             }
+            return *this;
         }
 
         Span<T>(const Span<T> &other) :
@@ -56,7 +63,13 @@ namespace Utils {
 
         [[nodiscard]] inline size_t size() const { return len; }
 
-        inline const T &operator[](size_t i) const { return ptr[i]; }
+        inline const T &operator[](size_t i) const {
+#ifndef NDEBUG
+            if (i > len)
+              throw std::runtime_error("Invalid access");
+#endif
+            return ptr[i];
+        }
 
         inline T *begin() { return ptr; }
 
@@ -69,24 +82,14 @@ namespace Utils {
         inline void fill(const T &v) { std::fill(ptr, ptr + len, v); }
 
         inline T mag() {
-            return sqrt(std::inner_product(begin(), end(), begin(), 0));
+            return std::sqrt(std::inner_product(begin(), end(), begin(), T(0)));
         }
 
     protected:
         std::unique_ptr<T[]> storage = nullptr;
         T *ptr = nullptr;
-        size_t len = 0;
+        const size_t len = 0;
     };
-
-    template<typename T>
-    inline Span<T> make_span(T *data, size_t len) {
-        return Span<T>(data, len);
-    }
-
-    template<typename T>
-    inline Span<T> make_span(T *start, T *end) {
-        return Span<T>(start, end);
-    }
 
     template<typename T>
     Span<T> &operator+=(Span<T> &a, const Span<T> &b) {

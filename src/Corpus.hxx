@@ -12,6 +12,7 @@
 #include <fstream>
 #include <map>
 #include <unordered_set>
+#include <random>
 #include <vector>
 
 class Corpus {
@@ -69,7 +70,14 @@ private:
 
     std::unordered_set<std::string> m_ignoreWords;
 
-    std::default_random_engine m_generator;
+    std::unordered_set<std::string> m_stopWords =
+            {"the", "and", "said", "could", "for", "reuter", "that", "from",
+             "will", "its", "with", "was", "has", "would", "not", "which",
+             "are", "but", "have", "this", "bank", "inc", "were", "net", "last",
+             "had", "they", "one", "also", "about", "loss", "been", "more",
+             "may", "their", "first", "than", "other", "all", "our", "some"};
+
+    std::mt19937 m_generator;
 
     std::discrete_distribution<size_t> m_vocabDistribution;
 };

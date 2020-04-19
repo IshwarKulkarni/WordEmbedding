@@ -61,7 +61,7 @@ private:
 
     std::uniform_real_distribution<float> m_realDist;
     std::uniform_int_distribution<size_t> m_intDist;
-    std::default_random_engine m_gen;
+    std::mt19937 m_gen;
 };
 
 std::ostream &operator<<(std::ostream &out, EmbeddingEvaluator::WordGroups &set);

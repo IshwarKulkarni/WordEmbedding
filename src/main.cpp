@@ -29,11 +29,11 @@ struct ProgramArgs {
             }
         };
 
-        for (auto &arg : Utils::make_span(argv + 1, argc - 1)) {
+        for (auto &arg : Utils::Span(argv + 1, argc - 1)) {
             argsToFileList(arg, "--sources=", sources);
             argsToFileList(arg, "--ignore=", ignore);
             getValue(arg, "--embeddingSize=", embeddingSize);
-            getValue(arg, "--eta=", learningRate);
+            getValue(arg, "--eta=", eta);
             getValue(arg, "--prevCt=", prevCt);
             getValue(arg, "--nextCt=", nextCt);
         }
@@ -41,9 +41,9 @@ struct ProgramArgs {
 
     vector<string> sources = {}, ignore = {};
     size_t embeddingSize = 64;
-    float learningRate = 0.002;
-    size_t prevCt = 3;
-    size_t nextCt = 2;
+    float eta = 0.05;
+    size_t prevCt = 2;
+    size_t nextCt = 1;
     size_t numEpochs = 25;
 
 private:
@@ -67,23 +67,22 @@ int main(int argc, char **argv) {
     std::ofstream corpusFile("corpus.txt");
     corpus.serialize(corpusFile);
 
-    SkipGram model(corpus, args.embeddingSize, args.prevCt + args.nextCt);
+    SkipGram model(corpus, args.embeddingSize, args.prevCt + args.nextCt, seed);
 
     EmbeddingEvaluator evaluator(model, seed);
     evaluator.addWordGrpFiles("data/synonyms.txt", "data/antonyms.txt");
 
-    for (unsigned i = 0; i < args.numEpochs; ++i) {
-        auto start = clock();
-        float eta = args.learningRate * powf(0.9, float(i));
-        model.train(eta);
-        float time = float(clock() - start) / CLOCKS_PER_SEC;
 
-        std::cout << "\nIter " << i << " in " << time << "s." << endl;
-        evaluator.evaluate();
+    for (size_t i = 0, start = clock(); i < args.numEpochs; ++i) {
+        model.train(args.eta * powf(0.9f, i));
+        std::cout << "\nIter " << i << " in "
+                  << (float(clock()) - start) / CLOCKS_PER_SEC << "s.\n";
+
         if (i % 5 == 0) {
             std::ofstream file(std::to_string(i) + "-iter.model");
             model.serialize(file);
         }
+        evaluator.evaluate();
     }
     return 0;
 }

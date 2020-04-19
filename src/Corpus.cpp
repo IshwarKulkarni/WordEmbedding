@@ -45,6 +45,9 @@ bool Corpus::clean(string &word) const {
         word = s;
         if (m_ignoreWords.find(s) == m_ignoreWords.end())
             return endOfSentence;
+
+        if (m_stopWords.find(s) == m_stopWords.end())
+            return endOfSentence;
     }
 
     word = "";
@@ -77,9 +80,8 @@ Corpus::Corpus(const vector<string> &filenames,
               << m_sentences.size() << " sentences.\n";
 }
 
-
 template<typename F>
-void goThroughFile(const char *filename, F function) {
+void goThroughFile(const char *filename, F doSomethingWithWord) {
     auto isBodyOpenTag = [](const string &word) {
         return word.find("<BODY>") != string::npos ||
                word.find("<body>") != string::npos;
@@ -106,15 +108,17 @@ void goThroughFile(const char *filename, F function) {
     bool accumulateOn = !ismarkup;
     while (source >> word) {
         if (ismarkup) {
-            if (!accumulateOn and isBodyOpenTag(word))
+            if (!accumulateOn and isBodyOpenTag(word)) {
                 accumulateOn = true;
+                continue;
+            }
 
             if (!accumulateOn)
                 continue;
             else if (isBodyCloseTag(word))
                 accumulateOn = false;
         }
-        function(word);
+        doSomethingWithWord(word);
     }
 }
 
@@ -178,8 +182,7 @@ void Corpus::encodeSource(const char *filename) {
 }
 
 size_t Corpus::operator[](const string &word) const {
-    auto found =
-            equal_range(m_orderedWords.begin(), m_orderedWords.end(), word);
+    auto found = equal_range(m_orderedWords.begin(), m_orderedWords.end(), word);
     if (found.first == m_orderedWords.end()) {
         throw runtime_error("Unknown word \"" + word + "\" queried");
     }

@@ -10,9 +10,9 @@
 
 void EmbeddingEvaluator::WordGroups::updateCosDistMuSigma() {
     std::vector<float> pairWiseDist;
+    mu = 0.f;
     for (size_t i = 0; i < embeddings.size(); ++i) {
         for (size_t j = i + 1; j < embeddings.size(); ++j) {
-            mu = 0.f;
             float cost = embeddings[i] * embeddings[j];
             mu += cost;
             pairWiseDist.push_back(cost);
